@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Large data files (but keep structure)
+*.gz
+*.zip
+*.tar
+*.tar.gz
+*.bz2
+*.h5
+*.hdf5
+
+# LDSC specific large files
+0.Data/GWAS/*.gz
+0.Data/Reference/ldsc_reference/
+0.Data/Results/annotations/*.gz
+0.Data/Results/ld_scores/*.gz
+0.Data/Results/sumstats/*.gz
+0.Data/Results/*/
+
+# Log files
+*.log
+*.out
+
+# Temporary files
+temp/
+tmp/
+.tmp/
+
+# Cache directories
+.cache/
+.claude/
+
+# Backup directories (but keep the structure info)
+backup_*/
+
+# Results that are too large
+2.Results/LDSC_Output/
+2.Results/Plots/*.pdf
+
+# Keep README files in results folders
+!2.Results/*/README.md
+!0.Data/*/README.md
