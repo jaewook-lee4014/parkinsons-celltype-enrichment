@@ -125,28 +125,29 @@ python ldsc_analysis_system.py --step ldsc         # LDSC regression만
 
 #### 📊 **LDSC 분석 과정 상세 (다중 세포타입)**
 
-```mermaid
-graph TB
-    A[1. 시스템 검증<br/>Reference Files] --> B[2. 4개 세포타입 Annotations<br/>8 datasets × 22 chromosomes]
-    
-    B --> C1[Olig: Oligodendrocytes<br/>Myelin & 백질]
-    B --> C2[Nurr: Dopaminergic Neurons<br/>도파민 생산]
-    B --> C3[NeuN: General Neurons<br/>신경 신호]
-    B --> C4[Neg: Microglia<br/>면역 반응]
-    
-    C1 --> D[3. GWAS Summary Stats<br/>LDSC 형식 변환]
-    C2 --> D
-    C3 --> D
-    C4 --> D
-    
-    D --> E[4. LD Scores 계산<br/>1000 Genomes 참조]
-    E --> F[5. LDSC Regression<br/>세포타입별 Partitioned h²]
-    F --> G[6. 세포타입 순위<br/>차별적 기여도 분석]
-    G --> H[7. 치료 타겟<br/>우선순위 제시]
-    
-    I[BaselineLD v2.2<br/>97 annotations] --> E
-    J[1000G EUR<br/>Reference Panel] --> E
-    K[HapMap3 SNPs<br/>LD Score Weights] --> F
+**LDSC 분석 파이프라인:**
+
+```
+1. 시스템 검증 (Reference Files)
+   ↓
+2. 4개 세포타입 Annotations 생성 (8 datasets × 22 chromosomes)
+   ├── Olig: Oligodendrocytes (Myelin & 백질)
+   ├── Nurr: Dopaminergic Neurons (도파민 생산)
+   ├── NeuN: General Neurons (신경 신호)
+   └── Neg: Microglia (면역 반응)
+   ↓
+3. GWAS Summary Stats (LDSC 형식 변환)
+   ↓
+4. LD Scores 계산 (1000 Genomes 참조)
+   ← BaselineLD v2.2 (97 annotations)
+   ← 1000G EUR Reference Panel
+   ↓
+5. LDSC Regression (세포타입별 Partitioned h²)
+   ← HapMap3 SNPs (LD Score Weights)
+   ↓
+6. 세포타입 순위 (차별적 기여도 분석)
+   ↓
+7. 치료 타겟 (우선순위 제시)
 ```
 
 #### ⏱️ **LDSC 분석 시간 예상**
@@ -209,29 +210,25 @@ python celltype_manhattan_plot.py
 
 ### 🏗️ **파이프라인 아키텍처 (다중 세포타입 비교)**
 
-```mermaid
-graph TB
-    A[좌표계 변환 확인] --> B[4개 세포타입 데이터 로딩]
-    B --> C[Olig: Oligodendrocytes]
-    B --> D[Nurr: Dopaminergic Neurons]
-    B --> E[NeuN: General Neurons]
-    B --> F[Neg: Microglia]
-    
-    C --> G[병렬 LDSC 분석]
-    D --> G
-    E --> G
-    F --> G
-    
-    G --> H[세포타입별 Enrichment]
-    H --> I[비교 분석 및 순위]
-    I --> J[차별적 기여도 규명]
-    J --> K[치료 타겟 우선순위]
-    
-    H --> L[Manhattan Plots]
-    H --> M[유전자 우선순위]
-    L --> N[종합 보고서]
-    M --> N
-    K --> N
+**전체 분석 파이프라인:**
+
+```
+좌표계 변환 확인
+↓
+4개 세포타입 데이터 로딩
+├── Olig: Oligodendrocytes
+├── Nurr: Dopaminergic Neurons  
+├── NeuN: General Neurons
+└── Neg: Microglia
+↓
+병렬 LDSC 분석
+↓
+세포타입별 Enrichment 결과
+├── 비교 분석 및 순위 → 차별적 기여도 규명 → 치료 타겟 우선순위
+├── Manhattan Plots ────────────────────────────┐
+└── 유전자 우선순위 ─────────────────────────────┤
+                                              ↓
+                                        종합 보고서
 ```
 
 ### 📁 **결과 디렉토리 구조**

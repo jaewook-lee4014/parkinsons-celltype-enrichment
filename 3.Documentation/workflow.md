@@ -132,7 +132,7 @@ graph TD
     F --> I[최종 결과 해석]
     H --> I
     
-    I --> J[세포타입 우선순위<br/>1. Dopaminergic<br/>2. Oligodendrocyte<br/>3. Microglia<br/>4. General Neurons]
+    I --> J[세포타입 우선순위<br/>1: Dopaminergic<br/>2: Oligodendrocyte<br/>3: Microglia<br/>4: General Neurons]
 ```
 
 ## 주요 결과 해석
