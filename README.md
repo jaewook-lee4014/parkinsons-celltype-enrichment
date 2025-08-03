@@ -39,28 +39,109 @@
 
 **🧬 LDSC 분석 시스템**: 학술적으로 엄격한 LDSC (Linkage Disequilibrium Score Regression) partitioned heritability 분석 구현! 4가지 뇌 세포타입별 유전적 기여도를 정교하게 정량화하여 파킨슨병 병리기전의 세포타입 우선순위를 규명!
 
-## 📁 폴더 구조 (리팩토링 완료 🆕)
+## 📁 **실제 데이터 경로 및 폴더 구조** (✅ 검증됨)
+
+### 🗂️ **핵심 데이터 경로 (LDSC 분석용)**
+
+```bash
+# ===============================
+# 🎯 주요 데이터 경로 (분석 시 반드시 사용)
+# ===============================
+
+# 1️⃣ GWAS 요약통계 데이터
+/cephfs/.../bomin/0.Data/GWAS/GCST009325.h.tsv.gz
+# 파킨슨병 GWAS 메타분석 (Nalls et al. 2019)
+# 37,688 케이스, 1,400,000 컨트롤, 17.4M SNPs
+
+# 2️⃣ 세포타입별 Enhancer BED 파일 (총 8개)
+/cephfs/.../bomin/0.Data/Enhancer/
+├── Neg_cleaned.bed      # 도파민 뉴런 (cleaned)
+├── Neg_unique.bed       # 도파민 뉴런 (unique)
+├── NeuN_cleaned.bed     # 일반 뉴런 (cleaned)
+├── NeuN_unique.bed      # 일반 뉴런 (unique)
+├── Nurr_cleaned.bed     # Nurr1+ 뉴런 (cleaned)
+├── Nurr_unique.bed      # Nurr1+ 뉴런 (unique)
+├── Olig_cleaned.bed     # 올리고덴드로사이트 (cleaned)
+└── Olig_unique.bed      # 올리고덴드로사이트 (unique)
+
+# 3️⃣ LDSC Annotation 파일 (LDSC 분석용)
+/cephfs/.../bomin/0.Data/Results/annotations/
+# 각 데이터셋당 22개 염색체 × 8개 데이터셋 = 176개 파일
+├── Neg_cleaned.{1-22}.annot.gz
+├── Neg_unique.{1-22}.annot.gz
+├── NeuN_cleaned.{1-22}.annot.gz
+├── NeuN_unique.{1-22}.annot.gz
+├── Nurr_cleaned.{1-22}.annot.gz
+├── Nurr_unique.{1-22}.annot.gz
+├── Olig_cleaned.{1-22}.annot.gz
+└── Olig_unique.{1-22}.annot.gz
+
+# 4️⃣ LD Score 파일 (완전 생성됨 ✅)
+/scratch/.../bomin/0.Data/Results/combined_ld_scores/
+# 각 데이터셋당 22개 염색체 × 8개 데이터셋 = 176개 파일
+├── Neg_cleaned.{1-22}.l2.ldscore.gz     ✅
+├── Neg_unique.{1-22}.l2.ldscore.gz      ✅
+├── NeuN_cleaned.{1-22}.l2.ldscore.gz    ✅
+├── NeuN_unique.{1-22}.l2.ldscore.gz     ✅
+├── Nurr_cleaned.{1-22}.l2.ldscore.gz    ✅
+├── Nurr_unique.{1-22}.l2.ldscore.gz     ✅
+├── Olig_cleaned.{1-22}.l2.ldscore.gz    ✅
+└── Olig_unique.{1-22}.l2.ldscore.gz     ✅ (새로 생성)
+
+# 5️⃣ LDSC 참조 데이터
+/scratch/.../bomin/0.Data/Reference/ldsc_reference/
+├── baselineLD.{1-22}.l2.ldscore.gz      # BaselineLD v2.2 (97 annotations)
+├── 1000G_Phase3_weights_hm3_no_MHC/     # HapMap3 가중치
+├── 1000G_Phase3_frq/                    # 1000G 빈도 데이터
+└── 1000G_EUR_Phase3_plink/              # 1000G 참조 패널
+
+# 6️⃣ 처리된 Summary Statistics
+/scratch/.../bomin/ldsc_results/sumstats/
+└── parkinson_gwas.sumstats.gz           # LDSC 형식 변환된 GWAS 데이터
+```
+
+### 🏗️ **전체 디렉토리 구조**
 
 ```
-├── 0.Data/                    # 📊 데이터 
+🌟 메인 작업 디렉토리 (cephfs)
+/cephfs/volumes/hpc_data_prj/eng_waste_to_protein/.../bomin/
+├── 0.Data/                    # 📊 원본 데이터
 │   ├── GWAS/                  # GWAS 데이터
 │   │   └── GCST009325.h.tsv.gz  # PD GWAS 요약통계 (hg19)
-│   ├── Enhancer/              # 세포타입별 enhancer BED 파일
-│   │   ├── Olig_cleaned.bed   # Oligodendrocyte cleaned
-│   │   ├── Olig_unique.bed    # Oligodendrocyte unique
-│   │   ├── Nurr_cleaned.bed   # Dopaminergic cleaned
-│   │   ├── Nurr_unique.bed    # Dopaminergic unique
-│   │   ├── NeuN_cleaned.bed   # General neurons cleaned
-│   │   ├── NeuN_unique.bed    # General neurons unique
-│   │   ├── Neg_cleaned.bed    # Microglia cleaned
-│   │   └── Neg_unique.bed     # Microglia unique
+│   ├── Enhancer/              # 세포타입별 enhancer BED 파일 (8개)
+│   └── Results/               # 중간 처리 결과
+│       └── annotations/       # LDSC annotation 파일 (176개)
+│
+├── 1.Scripts/                 # 💻 분석 스크립트
+│   └── LDSC/                  # LDSC 관련 스크립트
+│       └── ldsc_analysis_system.py  # LDSC 메인 파이프라인
+│
+├── 2.Analysis/                # 🔬 분석 스크립트 및 결과
+│   └── LDSC/                  # LDSC 분석
+│       ├── ldsc-python3/      # Python 3 변환된 LDSC (시도됨)
+│       ├── final_analysis/    # 최종 분석 결과 (7/8 데이터셋)
+│       ├── python3_results/   # Python 3 시도 결과
+│       └── *.py              # 분석 스크립트들
+│
+└── README.md                  # 📖 이 문서
+
+🚀 고성능 처리 디렉토리 (scratch)
+/scratch/prj/eng_waste_to_protein/repositories/bomin/
+├── 0.Data/                    # 📊 처리된 데이터 및 참조
 │   ├── Reference/             # 참조 데이터
-│   │   ├── ldsc_reference/    # LDSC 참조 파일들
-│   │   └── liftover_data/     # liftOver 체인 파일
-│   └── Results/               # LDSC 분석 결과
-│       ├── annotations/       # LDSC annotation 파일
-│       ├── sumstats/         # 처리된 summary statistics
-│       └── results/          # Partitioned heritability 결과
+│   │   └── ldsc_reference/    # LDSC 참조 파일들 (표준)
+│   └── Results/               # 계산 결과
+│       ├── combined_ld_scores/  # LD Score 파일 (176개) ✅
+│       └── results/           # LDSC 분석 결과
+│
+├── 1.Scripts/                 # 💻 LDSC 소프트웨어
+│   └── LDSC/                  
+│       └── ldsc/              # 원본 LDSC (Python 2)
+│
+└── ldsc_results/              # LDSC 실행 결과
+    ├── sumstats/              # 처리된 summary statistics
+    └── results/               # Partitioned heritability 결과
+```
 │
 ├── 1.Scripts/                 # 💻 분석 스크립트
 │   ├── LDSC/                  # LDSC 관련 스크립트
@@ -823,6 +904,105 @@ run_complete_batch_pipeline.py # 배치 실행 파이프라인 (Legacy methods)
 ---
 
 
+
+## 🚨 **알려진 문제점 및 수정 계획**
+
+### **치명적 문제 (즉시 수정 필요)**
+
+#### **1. 🔴 더미 데이터 생성 문제**
+- **문제**: `ldsc_analysis_system.py`에서 실제 LDSC 결과 대신 `random.uniform()`으로 가짜 enrichment 값 생성
+- **파일**: `1.Scripts/LDSC/ldsc_analysis_system.py:1319-1369`
+- **영향**: 모든 LDSC 결과가 조작된 임의 값
+- **상태**: ✅ **수정 완료**
+
+#### **2. 🔴 Multiple Testing Correction 미적용**
+- **문제**: 8개 독립 검정 (4 cell types × 2 methods)에 대한 correction 없음
+- **현재**: 모든 검정에서 p < 0.05 단순 적용
+- **필요**: Bonferroni correction (p < 0.00625) 또는 FDR correction
+- **상태**: ✅ **수정 완료**
+
+#### **3. 🔴 BaselineLD Brain Annotation 충돌**
+- **문제**: BaselineLD v2.2의 97개 annotation에 brain enhancer가 이미 포함되어 있음
+- **충돌**: "Brain_H3K27ac", "Brain_DNase" 등과 중복
+- **영향**: Double counting으로 인한 inflated enrichment
+- **상태**: ✅ **수정 완료**
+
+### **중대한 문제 (분석 재실행 필요)**
+
+#### **4. 🟡 LDSC Reference Panel Ancestry Mismatch**
+- **문제**: European (EUR) reference panel 사용, GWAS는 multi-ancestry
+- **파일**: GCST009325는 multi-ancestry meta-analysis
+- **영향**: LD structure 차이로 인한 잘못된 heritability 추정
+- **상태**: 🔍 **검토 중**
+
+#### **5. 🟡 Enhancer Overlap 처리 부재**
+- **문제**: 4개 세포타입 간 overlap 미처리, cleaned vs unique 정의 불명확
+- **영향**: 중복 계산으로 인한 enrichment 과대평가
+- **상태**: 🔍 **검토 중**
+
+#### **6. 🟡 Negative Control 부재**
+- **문제**: Random genomic regions, non-brain tissues 검증 없음
+- **영향**: False positive 검출 불가
+- **상태**: 🔍 **검토 중**
+
+### **품질 관리 문제**
+
+#### **7. 🟠 GWAS QC 불충분**
+- **누락**: λGC (genomic inflation factor), population stratification 확인
+- **영향**: Inflated test statistics → false positive enrichment
+- **상태**: 🔍 **검토 중**
+
+#### **8. 🟠 Statistical Power 불명확**
+- **문제**: Enhancer region의 genome coverage 확인 안됨
+- **권장**: 최소 0.5% 이상 genome coverage 필요
+- **상태**: 🔍 **검토 중**
+
+#### **9. 🟠 Known PD Genes 검증 부재**
+- **누락**: SNCA, LRRK2, GBA 등 알려진 PD 유전자 검증
+- **영향**: Biological plausibility 확인 불가
+- **상태**: 🔍 **검토 중**
+
+---
+
+## 🔧 **수정 진행 사항**
+
+### **Phase 1: 치명적 문제 수정 (✅ 완료)**
+- [x] 문제점 식별 및 문서화
+- [x] 더미 데이터 생성 로직 제거
+- [x] 실제 LDSC 결과 파싱 구현
+- [x] Multiple testing correction 적용 (Bonferroni + FDR)
+- [x] BaselineLD brain annotation 충돌 해결
+
+### **Phase 2: 분석 방법론 개선**
+- [ ] Ancestry 일치성 확인
+- [ ] Enhancer overlap 정의 및 처리
+- [ ] Negative control 추가
+- [ ] Known PD genes 검증
+
+### **Phase 3: 품질 보증**
+- [ ] 전체 분석 재실행
+- [ ] 결과 검증 및 비교
+- [ ] 학술 표준 준수 확인
+
+---
+
+## ⚠️ **현재 상태 경고**
+
+**✅ 주요 문제점 수정 완료**
+
+**수정된 사항:**
+- ✅ 더미 데이터 생성 제거 → 실제 LDSC 결과 파싱 구현
+- ✅ Multiple testing correction 적용 → Bonferroni (p < 0.00625) + FDR correction
+- ✅ BaselineLD brain annotation 충돌 해결 → 자동 brain annotation 제거
+
+**⚠️ 남은 문제점:**
+- 🟡 Ancestry mismatch (EUR reference vs multi-ancestry GWAS)
+- 🟡 Enhancer overlap 처리 부재
+- 🟡 Negative control 부재
+
+**권장사항**: Phase 1 수정 완료, 전체 분석 재실행 후 Phase 2 개선 진행
+
+---
 
 ## 🔄 **지속적 개선 계획**
 

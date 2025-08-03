@@ -1,0 +1,10 @@
+{
+  "total_datasets": 8,
+  "significant_datasets": 8,
+  "mean_enrichment": 3.2668346739320864,
+  "std_enrichment": 0.6112156432464296,
+  "max_enrichment": 4.040806782557817,
+  "min_enrichment": 2.3495192354729815,
+  "top_dataset": "Olig_cleaned",
+  "bonferroni_threshold": 0.00625
+}
