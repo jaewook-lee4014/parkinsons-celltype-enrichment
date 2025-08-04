@@ -29,22 +29,33 @@ class LDSCConfig:
     """LDSC 분석을 위한 설정 클래스"""
     
     def __init__(self):
-        # Base directories
-        self.base_dir = Path("/scratch/prj/eng_waste_to_protein/repositories/bomin")
-        self.ldsc_dir = self.base_dir / "1.Scripts" / "LDSC" / "ldsc"
-        self.reference_dir = self.base_dir / "0.Data" / "Reference" / "ldsc_reference"
+        # Base directories - clean paths for new data only
+        self.base_dir_cephfs = Path("/cephfs/volumes/hpc_data_prj/eng_waste_to_protein/ae035a41-20d2-44f3-aa46-14424ab0f6bf/repositories/bomin")
+        self.base_dir_scratch = Path("/scratch/prj/eng_waste_to_protein/repositories/bomin")
         
-        # Output directories
-        self.ldsc_output_dir = self.base_dir / "ldsc_results"
+        # LDSC software directory 
+        self.ldsc_dir = self.base_dir_scratch / "1.Scripts" / "LDSC" / "ldsc"
+        self.reference_dir = self.base_dir_scratch / "0.Data" / "Reference" / "ldsc_reference"
+        
+        # Input data (use cephfs paths for annotations and GWAS)
+        self.gwas_file = self.base_dir_cephfs / "0.Data" / "GWAS" / "GCST009325.h.tsv.gz"
+        self.enhancer_dir = self.base_dir_cephfs / "0.Data" / "Enhancer"
+        
+        # Output directories (use scratch for performance)
+        self.ldsc_output_dir = self.base_dir_scratch / "ldsc_results"
         self.ldsc_output_dir.mkdir(exist_ok=True)
         
-        self.annotations_dir = self.ldsc_output_dir / "annotations"
+        # New directory structure
+        self.annotations_dir = self.base_dir_cephfs / "ldsc_results" / "annotations"
         self.annotations_dir.mkdir(exist_ok=True)
         
-        self.sumstats_dir = self.ldsc_output_dir / "sumstats"
+        self.ld_scores_dir = self.base_dir_scratch / "new_ld_scores"
+        self.ld_scores_dir.mkdir(exist_ok=True)
+        
+        self.sumstats_dir = self.base_dir_scratch / "ldsc_results" / "sumstats"
         self.sumstats_dir.mkdir(exist_ok=True)
         
-        self.results_dir = self.ldsc_output_dir / "results"
+        self.results_dir = self.base_dir_scratch / "ldsc_results" / "results"
         self.results_dir.mkdir(exist_ok=True)
         
         # Reference data paths (use format that works with this LDSC version)
@@ -53,18 +64,36 @@ class LDSCConfig:
         self.weights = str(self.reference_dir / "1000G_Phase3_weights_hm3_no_MHC" / "weights.hm3_noMHC.")
         self.frq_files = str(self.reference_dir / "1000G_Phase3_frq" / "1000G.EUR.QC.")
         
-        # Enhancer BED files (converted to hg19)
-        self.enhancer_bed_dir = self.base_dir / "0.Data" / "processed" / "hg19_coordinates"
+        # Clean structure - removed outdated paths
         
-        # Original GWAS data
-        self.gwas_data_file = self.base_dir / "0.Data" / "GWAS" / "GCST009325.h.tsv.gz"
+        # 8개 데이터셋 명시적 정의 (4 cell types × 2 processing methods)
+        self.datasets = [
+            "Olig_cleaned",   # Oligodendrocytes - cleaned
+            "Olig_unique",    # Oligodendrocytes - unique
+            "Neg_cleaned",    # Microglia - cleaned  
+            "Neg_unique",     # Microglia - unique
+            "NeuN_cleaned",   # General Neurons - cleaned
+            "NeuN_unique",    # General Neurons - unique
+            "Nurr_cleaned",   # Dopaminergic Neurons - cleaned
+            "Nurr_unique"     # Dopaminergic Neurons - unique
+        ]
         
-        logger.info("LDSC 설정 초기화 완료")
+        # Cell type mapping for analysis
+        self.cell_type_mapping = {
+            "Olig": "Oligodendrocytes",
+            "Neg": "Microglia", 
+            "NeuN": "General_Neurons",
+            "Nurr": "Dopaminergic_Neurons"
+        }
+        
+        logger.info(f"✅ LDSC 설정 초기화 완료 - {len(self.datasets)}개 데이터셋 정의됨")
+        logger.info(f"📋 데이터셋: {', '.join(self.datasets)}")
+        
         
     def validate_reference_files(self) -> bool:
-        """Reference 파일들 존재 확인"""
+        """Reference 파일들 존재 확인 - 새로운 데이터 구조"""
         required_files = [
-            self.gwas_data_file,
+            self.gwas_file,
             self.ldsc_dir / "ldsc.py",
             self.ldsc_dir / "munge_sumstats.py",
             self.ldsc_dir / "make_annot.py"
@@ -96,19 +125,27 @@ class AnnotationGenerator:
         logger.info("Annotation Generator 초기화")
     
     def create_enhancer_annotations(self) -> Dict[str, Path]:
-        """각 enhancer BED 파일을 LDSC annotation으로 변환"""
-        logger.info("🧬 Enhancer annotations 생성 시작")
+        """8개 enhancer BED 파일을 LDSC annotation으로 변환"""
+        logger.info("🧬 Enhancer annotations 생성 시작 - 8개 데이터셋")
         
-        # Get all hg19 BED files
-        bed_files = list(self.config.enhancer_bed_dir.glob("*_hg19.bed"))
+        # Get BED files for all 8 datasets
+        bed_files = []
+        for dataset in self.config.datasets:
+            bed_file = self.config.enhancer_dir / f"{dataset}.bed"
+            if bed_file.exists():
+                bed_files.append(bed_file)
+                logger.info(f"  ✅ Found: {dataset}.bed")
+            else:
+                logger.error(f"  ❌ Missing: {dataset}.bed")
+        
         if not bed_files:
-            raise FileNotFoundError("No hg19 converted BED files found")
+            raise FileNotFoundError("No enhancer BED files found for 8 datasets")
         
         annotation_files = {}
         
         for bed_file in bed_files:
-            # Extract dataset name
-            dataset_name = bed_file.stem.replace("_hg19", "").replace("cleaned_data_", "").replace("unique_data_", "")
+            # Extract dataset name (clean - no replacements needed)
+            dataset_name = bed_file.stem  # e.g., "Olig_cleaned", "Neg_unique", etc.
             
             logger.info(f"  Creating annotations for {dataset_name}")
             
@@ -317,11 +354,11 @@ class LDSCAnalyzer:
         return all_results
     
     def _create_ld_scores(self, dataset_name: str, chr_annotations: Dict[int, Path]) -> bool:
-        """특정 데이터셋에 대한 LD scores 생성"""
+        """특정 데이터셋에 대한 LD scores 생성 - 새로운 디렉토리 사용"""
         logger.info(f"  🔗 {dataset_name} LD scores 생성 중...")
         
-        # Check if already exists
-        existing_files = list(self.config.results_dir.glob(f"{dataset_name}.*.l2.ldscore.gz"))
+        # Check if already exists in NEW directory
+        existing_files = list(self.config.ld_scores_dir.glob(f"{dataset_name}.*.l2.ldscore.gz"))
         if len(existing_files) >= 20:  # Most chromosomes should exist
             logger.info(f"    ✅ 기존 LD scores 사용 ({len(existing_files)} 파일)")
             return True
@@ -340,8 +377,8 @@ class LDSCAnalyzer:
                     "--bfile", f"{self.config.plink_files}.{chromosome}",
                     "--ld-wind-cm", "1",
                     "--annot", str(chr_annotations[chromosome]),
-                    "--out", str(self.config.results_dir / f"{dataset_name}.{chromosome}"),
-                    "--print-snps", str(self.config.reference_dir / "hm3_no_MHC.list.txt")
+                    "--out", str(self.config.ld_scores_dir / f"{dataset_name}.{chromosome}"),
+                    "--print-snps", str(self.config.reference_dir / "w_hm3.snplist")
                 ]
                 
                 result = subprocess.run(ldscore_cmd, capture_output=True, text=True, 
